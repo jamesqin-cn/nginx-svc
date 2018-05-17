@@ -1,0 +1,23 @@
+{{ range $service := services }} {{ if ne .Name "consul" }}
+{{$serviceList:=service $service.Name }}
+{{$length:=len $serviceList}}
+{{if gt $length 0}}
+upstream {{ $service.Name }} {
+  {{ range service $service.Name }}#passing server list
+  server {{ .Address }}:{{ .Port }};
+  {{ end }}
+}
+
+server {
+  listen 80;
+  server_name {{ $service.Name | replaceAll "-" "." | replaceAll ".9066" "" }};
+  root /dev/null;
+  location / {
+    proxy_pass http://{{ $service.Name }}/;
+  }
+
+  access_log /logs/{{ $service.Name }}-access.log access;
+  error_log  /logs/{{ $service.Name }}-error.log;
+}
+{{end}}
+{{ end }} {{ end }}
