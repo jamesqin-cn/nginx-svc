@@ -1,23 +1,31 @@
-{{ range $service := services }} {{ if ne .Name "consul" }}
-{{$serviceList:=service $service.Name }}
-{{$length:=len $serviceList}}
-{{if gt $length 0}}
-upstream {{ $service.Name }} {
-  {{ range service $service.Name }}#passing server list
-  server {{ .Address }}:{{ .Port }};
-  {{ end }}
-}
+{{ range $service := services }}
+    {{ if ne .Name "consul" }}
+        {{ $serviceList := service $service.Name }}
+        {{ $length := len $serviceList }}
+        {{ if gt $length 0 }}
+            # TAGS:{{ range $tag := .Tags }} {{ $tag }} {{ end }}
+            upstream {{ $service.Name | replaceAll "." "-" }} {
+                #passing server list
+                {{ range service $service.Name }}
+                server {{ .Address }}:{{ .Port }};
+                {{ end }}
+            }
 
-server {
-  listen 80;
-  server_name {{ $service.Name | replaceAll "-" "." | replaceAll ".9066" "" }};
-  root /dev/null;
-  location / {
-    proxy_pass http://{{ $service.Name }}/;
-  }
+            server {
+                listen 80;
+                server_name {{ $service.Name | replaceAll "-" "." }};
+                root /dev/null;
+                location / {
+                    {{ if .Tags | contains "fpm" }}
+                    fastcgi_pass http://{{ $service.Name }}/;
+                    {{ else }}
+                    proxy_pass http://{{ $service.Name }}/;
+                    {{ end }}
+                }
 
-  access_log /logs/{{ $service.Name }}-access.log access;
-  error_log  /logs/{{ $service.Name }}-error.log;
-}
-{{end}}
-{{ end }} {{ end }}
+                access_log /logs/{{ $service.Name }}-access.log access;
+                error_log  /logs/{{ $service.Name }}-error.log;
+            }
+        {{ end }}
+    {{ end }}
+{{ end }}
