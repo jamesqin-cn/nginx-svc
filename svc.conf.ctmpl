@@ -10,7 +10,6 @@ map $http_upgrade $connection_upgrade {
         {{ if gt $length 0 }}
             # TAGS:{{ range $tag := .Tags }} {{ $tag }} {{ end }}
             upstream {{ $service.Name }} {
-                ip_hash;
                 #passing server list
                 {{ range service $service.Name }}
                 server {{ .Address }}:{{ .Port }};
